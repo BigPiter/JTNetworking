@@ -28,7 +28,7 @@ Pod::Spec.new do |s|
 It is a marquee view used on iOS, which implement by Objective-C.
 DESC
 
-  s.homepage     = "https://gitee.com/zhangjitao0"
+  s.homepage     = "https://github.com/BigPiter/JTNetworking"
   # s.screenshots  = "www.example.com/screenshots_1.gif", "www.example.com/screenshots_2.gif"
 
 
