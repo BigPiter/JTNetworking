@@ -11,7 +11,7 @@
 @implementation JTURLRequest
 
 - (void)dealloc{
-    DLog(@"%s",__func__);
+    NSLog(@"%s",__func__);
 }
 #pragma mark - 请求头
 - (void)setValue:(NSString *)value forHeaderField:(NSString *)field{

@@ -7,7 +7,9 @@
 //
 
 #import "JTCacheManager.h"
+#import <UIKit/UIKit.h>
 #import <CommonCrypto/CommonDigest.h>
+#import "JTRequestManager+PathMethod.h"
 
 NSString *const PathSpace =@"JTKit";
 NSString *const defaultCachePath =@"AppNetCache";
@@ -25,6 +27,7 @@ static const NSInteger timeOut = 60*60;
 @implementation JTCacheManager
 
 + (JTCacheManager *)sharedInstance{
+    
     static JTCacheManager *cacheInstance=nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{

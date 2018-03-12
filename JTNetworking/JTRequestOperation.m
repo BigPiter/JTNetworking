@@ -8,8 +8,10 @@
 
 #import "JTRequestOperation.h"
 #import "JTCacheManager.h"
-#import "LoginModule.h"
-#import "MessageNoticeCenter.h"
+#import "JTRequestManager+PathMethod.h"
+#define BASEURL @"http://www.baidu.com"
+
+#define JTNLog( s, ... ) NSLog( @"<%p %@:(%d)> %@", self, [[NSString stringWithUTF8String:__FILE__] lastPathComponent], __LINE__, [NSString stringWithFormat:(s), ##__VA_ARGS__] )
 
 @interface JTRequestOperation()
 
@@ -71,10 +73,8 @@
 }
 
 - (JTURLRequest *)checkBaseUrl:(JTURLRequest *)request {
-    if ([DataCheck isValidString:request.urlString]) {
-        if (![request.urlString containsString:@"plugin.php"]) {
-            request.urlString = [NSString stringWithFormat:@"api/mobile/%@",request.urlString];
-        }
+    if (![request.urlString containsString:@"plugin.php"]) {
+        request.urlString = [NSString stringWithFormat:@"api/mobile/%@",request.urlString];
     }
     return request;
 }
@@ -98,7 +98,6 @@
 - (NSURLSessionDataTask *)dataTaskWithGetRequest:(JTURLRequest *)request progress:(JTProgressBlock)progress success:(JTRequestSuccess)success failed:(JTRequestFailed)failed{
     
     if ([JTRequestOperation shareInstance].networkError == YES) {
-        [MBProgressHUD showError:@"网络连接断开,请检查网络!" toView:nil];
         failed ? failed(nil) : nil;
         return nil;
     }
@@ -112,7 +111,6 @@
         
         responseObject = [self responseObjectForResponseData:responseObject];
         if (self.serializationError == nil) {
-            [self publicDo:responseObject];
             success ? success(responseObject,request.loadType) : nil;
         } else {
             failed ? failed(self.serializationError) : nil;
@@ -130,10 +128,10 @@
         progress ? progress(downloadProgress) : nil;
         
     } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
-        DLog(@"%@",task.currentRequest);
+        JTNLog(@"%@",task.currentRequest);
         success ? success(responseObject,0) : nil;
     } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
-        DLog(@"%@",task.currentRequest);
+        JTNLog(@"%@",task.currentRequest);
         failed ? failed(error) : nil;
     }];
 }
@@ -163,7 +161,6 @@
 
 - (NSURLSessionDataTask *)dataTaskWithPostRequest:(JTURLRequest *)request loadType:(JTLoadType)type progress:(JTProgressBlock)progress success:(JTRequestSuccess)success failed:(JTRequestFailed)failed {
     if ([JTRequestOperation shareInstance].networkError == YES) {
-        [MBProgressHUD showError:@"网络连接断开,请检查网络!" toView:nil];
         failed ? failed(nil) : nil;
         return nil;
     }
@@ -180,7 +177,6 @@
         responseObject = [self responseObjectForResponseData:responseObject];
         
         if (self.serializationError == nil) {
-            [self publicDo:responseObject];
             success ? success(responseObject,request.loadType) : nil;
         } else {
             failed ? failed(self.serializationError) : nil;
@@ -200,10 +196,10 @@
         progress ? progress(uploadProgress) : nil;
         
     } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
-         DLog(@"%@",task.currentRequest);
+         JTNLog(@"%@",task.currentRequest);
         success ? success(responseObject,0) : nil;
     } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
-         DLog(@"%@",task.currentRequest);
+         JTNLog(@"%@",task.currentRequest);
         failed ? failed(error) : nil;
     }];
 }
@@ -241,10 +237,10 @@
             progress ? progress(uploadProgress) : nil;
         });
     } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
-         DLog(@"%@",task.currentRequest);
+         JTNLog(@"%@",task.currentRequest);
         success ? success(responseObject,0) : nil;
     } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error){
-         DLog(@"%@",task.currentRequest);
+         JTNLog(@"%@",task.currentRequest);
         failed ? failed(error) : nil;
         
     }];
@@ -321,7 +317,7 @@
             NSStringEncoding gbkEncoding = CFStringConvertEncodingToNSStringEncoding(kCFStringEncodingGB_18030_2000);
             dataStr = [[NSMutableString alloc] initWithData:responseObject encoding:gbkEncoding];
         }
-        DLog(@"%@",dataStr);
+        JTNLog(@"%@",dataStr);
     }
 #endif
     self.serializationError = error;
@@ -338,7 +334,7 @@
         switch (status)
         {
             case AFNetworkReachabilityStatusUnknown: // 未知网络
-                DLog(@"未知网络");
+                JTNLog(@"未知网络");
                 
                 [JTRequestOperation shareInstance].networkError = NO;
                 break;
@@ -346,33 +342,16 @@
                 [JTRequestOperation shareInstance].networkError = YES;
                 break;
             case AFNetworkReachabilityStatusReachableViaWWAN: // 手机自带网络
-                DLog(@"手机自带网络");
+                JTNLog(@"手机自带网络");
                 [JTRequestOperation shareInstance].networkError = NO;
                 break;
             case AFNetworkReachabilityStatusReachableViaWiFi: // WIFI
-                DLog(@"WIFI");
+                JTNLog(@"WIFI");
                 [JTRequestOperation shareInstance].networkError = NO;
                 break;
         }
     }];
     [mgr startMonitoring];
-}
-
-// 掌上论坛公共处理
-- (void)publicDo:(id)responseObject {
-    if ([LoginModule isLogged]) {
-        if ([DataCheck isValidDictionary:[responseObject objectForKey:@"Variables"]]) { // 退出处理
-            if (![DataCheck isValidString:[[responseObject objectForKey:@"Variables"] objectForKey:@"auth"]]) {
-                [LoginModule signout];
-            }
-        }
-        if ([DataCheck isValidDictionary:[responseObject objectForKey:@"Variables"]]) { // 公共提醒
-            [Environment sharedEnvironment].loggedformhash = [[responseObject objectForKey:@"Variables"] objectForKey:@"formhash"];
-            if ([DataCheck isValidDictionary:[[responseObject objectForKey:@"Variables"] objectForKey:@"notice"]]) { //公共提醒
-                [MessageNoticeCenter shareInstance].noticeDic = [NSMutableDictionary dictionaryWithDictionary:[[responseObject objectForKey:@"Variables"] objectForKey:@"notice"]];
-            }
-        }
-    }
 }
 
 - (NSString *)cancelRequest:(NSString *)urlString{
