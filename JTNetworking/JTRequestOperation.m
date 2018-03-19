@@ -9,7 +9,6 @@
 #import "JTRequestOperation.h"
 #import "JTCacheManager.h"
 #import "JTRequestManager+PathMethod.h"
-#define BASEURL @"http://www.baidu.com"
 
 #define JTNLog( s, ... ) NSLog( @"<%p %@:(%d)> %@", self, [[NSString stringWithUTF8String:__FILE__] lastPathComponent], __LINE__, [NSString stringWithFormat:(s), ##__VA_ARGS__] )
 
@@ -33,15 +32,14 @@
 
 - (instancetype)init
 {
-    NSURL *baseUrl = [NSURL URLWithString:BASEURL];
-    self = [super initWithBaseURL:baseUrl sessionConfiguration:NSURLSessionConfiguration.defaultSessionConfiguration];
+    self = [super init];
     if (self) {
         //无条件地信任服务器端返回的证书。
         self.securityPolicy = [AFSecurityPolicy policyWithPinningMode:AFSSLPinningModeNone];
         self.securityPolicy = [AFSecurityPolicy defaultPolicy];
         self.securityPolicy.allowInvalidCertificates = YES;
         self.securityPolicy.validatesDomainName = NO;
-//        /*因为与缓存互通 服务器返回的数据 必须是二进制*/
+        //        /*因为与缓存互通 服务器返回的数据 必须是二进制*/
         self.responseSerializer = [AFHTTPResponseSerializer serializer];
         self.operationQueue.maxConcurrentOperationCount = 5;
         self.responseSerializer.acceptableContentTypes = [NSSet setWithObjects:@"application/json", @"text/json", @"text/javascript",@"text/html",@"text/plain",@"text/xml",nil];
@@ -54,8 +52,6 @@
 }
 
 - (void)sendRequest:(JTURLRequest *)request progress:(JTProgressBlock)progress success:(JTRequestSuccess)success failed:(JTRequestFailed)failed {
-    
-    request = [self checkBaseUrl:request];
     
     if (request.methodType==JTMethodTypePOST) {
         
@@ -70,13 +66,6 @@
         
         [self getRequest:request progress:progress success:success failed:failed];
     }
-}
-
-- (JTURLRequest *)checkBaseUrl:(JTURLRequest *)request {
-    if (![request.urlString containsString:@"plugin.php"]) {
-        request.urlString = [NSString stringWithFormat:@"api/mobile/%@",request.urlString];
-    }
-    return request;
 }
 
 #pragma mark - GET
@@ -101,7 +90,7 @@
         failed ? failed(nil) : nil;
         return nil;
     }
-//    [self requestSerializerConfig:request];
+    //    [self requestSerializerConfig:request];
     [self headersAndTimeConfig:request];
     
     return  [self dataTaskWithGetURL:request.urlString parameters:request.parameters  progress:progress success:^(id responseObject, JTLoadType type) {
@@ -139,7 +128,7 @@
 // 判断是否已经有缓存了
 - (BOOL)isCache:(JTURLRequest *)request {
     
-    NSString *key = [self keyWithParameters:[self checkBaseUrl:request]];
+    NSString *key = [self keyWithParameters:request];
     return [[JTCacheManager sharedInstance] diskCacheExistsWithKey:key];
 }
 
@@ -196,10 +185,10 @@
         progress ? progress(uploadProgress) : nil;
         
     } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
-         JTNLog(@"%@",task.currentRequest);
+        JTNLog(@"%@",task.currentRequest);
         success ? success(responseObject,0) : nil;
     } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
-         JTNLog(@"%@",task.currentRequest);
+        JTNLog(@"%@",task.currentRequest);
         failed ? failed(error) : nil;
     }];
 }
@@ -237,10 +226,10 @@
             progress ? progress(uploadProgress) : nil;
         });
     } success:^(NSURLSessionDataTask * _Nonnull task, id  _Nullable responseObject) {
-         JTNLog(@"%@",task.currentRequest);
+        JTNLog(@"%@",task.currentRequest);
         success ? success(responseObject,0) : nil;
     } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error){
-         JTNLog(@"%@",task.currentRequest);
+        JTNLog(@"%@",task.currentRequest);
         failed ? failed(error) : nil;
         
     }];
@@ -358,10 +347,6 @@
     if (self.tasks.count <= 0) {
         return nil;
     }
-    if (![urlString containsString:@"plugin.php"]) {
-        urlString = [NSString stringWithFormat:@"api/mobile/%@",urlString];
-    }
-    urlString = [NSString stringWithFormat:@"%@%@",BASEURL,urlString];
     __block NSString *currentUrlString=nil;
     @synchronized (self.tasks) {
         [self.tasks enumerateObjectsUsingBlock:^(NSURLSessionTask *task, NSUInteger idx, BOOL * _Nonnull stop) {
@@ -376,3 +361,4 @@
 }
 
 @end
+
